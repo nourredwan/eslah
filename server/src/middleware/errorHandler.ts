@@ -21,6 +21,8 @@ export function errorHandler(
         message: e.message,
       })),
     });
+  }
+
   // Handle Multer errors (file size, format)
   if (err.name === 'MulterError' || (err.message && err.message.includes('صيغة الملف غير مدعومة'))) {
     return res.status(400).json({
