@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  volunteer
+  organization
+  admin
+}
+
+enum ReportCategory {
+  roads
+  electricity
+  water
+  health
+  humanitarian
+  environment
+  education
+  other
+}
+
+enum ReportPriority {
+  urgent
+  medium
+  low
+}
+
+enum ReportStatus {
+  new
+  in_progress
+  completed
+}
+
+model User {
+  id             String        @id @default(cuid())
+  name           String
+  email          String        @unique
+  password       String
+  role           Role          @default(user)
+  avatar         String        @default("👤")
+  points         Int           @default(0)
+  rating         Float         @default(5.0)
+  bio            String?
+  phone          String?
+  reportsCount   Int           @default(0)
+  resolvedCount Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  reports        Report[]      @relation("ReportedByUser")
+  adoptedReports Report[]      @relation("AdoptedByUser")
+  comments       Comment[]
+  upvotes        Upvote[]
+  badges         UserBadge[]
+  notifications  Notification[]
+
+  @@map("users")
+}
+
+model Report {
+  id          String         @id @default(cuid())
+  title       String
+  description String
+  category    ReportCategory
+  priority    ReportPriority @default(medium)
+  status      ReportStatus   @default(new)
+  address     String
+  lat         Float
+  lng         Float
+  images      String[]       @default([])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  reportedById String
+  reportedBy   User          @relation("ReportedByUser", fields: [reportedById], references: [id], onDelete: Cascade)
+
+  adoptedById  String?
+  adoptedBy    User?         @relation("AdoptedByUser", fields: [adoptedById], references: [id], onDelete: SetNull)
+
+  comments     Comment[]
+  upvotes      Upvote[]
+
+  @@map("reports")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reportId  String
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Upvote {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  reportId  String
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, userId])
+  @@map("upvotes")
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String
+  icon        String
+  description String
+  users       UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId  String
+  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
